@@ -1,33 +1,47 @@
 const express = require('express')
-const cheerio = require('cheerio')
 const axios = require('axios')
+const cheerio = require('cheerio')
 
-const PORT = process.env.PORT || 6969
+const PORT = process.env.PORT | 8080
 const app = express()
 
-let quote = {}
-let q = null
-let a = null
+let coins = {}
+let names = []
+
+const url = `https://coinmarketcap.com/`
 
 app.get('/', (req, res) => {
-	res.json("Welcome to my api")
+    axios.get(url).then(response => {
+        const $ = cheerio.load(response.data)
+
+        // api variables
+        let fname = ""
+        let sname = ""
+        $("table.h7vnx2-2.czTsgW.cmc-table").each(function () {
+            $(this).find("table > tbody > tr > td > div.sc-16r8icm-0.escjiH").each(function () {
+                $(this).find("div > a > div > div").each(function () {
+                    
+                    // Getting the coin name
+                    $(this).find("div > p.sc-1eb5slv-0.iworPT").each(function () {
+                        fname = $(this).text()
+                    })
+
+                    // Getting the short form of the coin
+                    $(this).find("div > div > p.sc-1eb5slv-0.gGIpIK.coin-item-symbol").each(function () {
+                        sname = $(this).text()
+                    })
+                    var coin_name = fname + " - " + sname
+                    names.push(coin_name)
+                })
+            })
+
+            $(this).find("table > tbody > tr > td > div.sc-131di3y-0.cLgOOr > a.cmc-link > span").each(function (index, element) {
+                coins[names[index]] = $(this).text()
+            })
+        })
+
+        res.json(coins)
+    })
 })
 
-app.get('/quote', (req, res) => {
-	const url = `https://zenquotes.io/`
-	axios.get(url).then(response => {
-		const $ = cheerio.load(response.data)
-
-		$('div[id="carousel-quote-1"]').each(function () {
-			$(this).find('div > h1').each(function (index, element) {
-				quote['quote'] = $(element).text()
-			})
-			$(this).find('div > p').each(function () {
-				quote['author'] = $(this).text()
-			})
-		})
-		res.json(quote)
-	})
-})
-
-app.listen(PORT, () => console.log(`Server is listening at ${PORT}`))
+app.listen(PORT)
